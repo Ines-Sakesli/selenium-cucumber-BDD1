@@ -1,41 +1,41 @@
 pipeline {
     agent any
 
-    tools {
-        jdk 'JAVA_HOME'      // Nom exact de ta JDK dans Jenkins
-        maven 'MAVEN_HOME'   // Nom exact de ton Maven dans Jenkins
-    }
-
-    options {
-        timestamps()
-        disableConcurrentBuilds()
-    }
-
     stages {
+
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
 
-        stage('Build & Test') {
+        stage('Run Tests') {
             steps {
-                echo 'Lancement des tests Maven...'
-                bat 'mvn clean verify'
+                bat 'mvn clean test'
             }
         }
-      
+
+        stage('Generate Cucumber HTML Report') {
+            steps {
+                bat '''
+                mvn net.masterthought:cucumber-reporting:5.7.0:generate ^
+                -DcucumberOutput=target/report/cucumber.json ^
+                -DoutputDirectory=target/cucumber-html-report ^
+                -DprojectName="Selenium Cucumber BDD"
+                '''
+            }
+        }
     }
 
     post {
         always {
-            echo 'Publication du rapport HTML'
             publishHTML(target: [
-                reportDir: 'target/report',
-                reportFiles: 'cucumber-report.html',
-                reportName: 'Cucumber Report',
+                reportDir: 'target/cucumber-html-report',
+                reportFiles: 'index.html',
+                reportName: 'Cucumber Report (Masterthought)',
                 keepAll: true,
-                alwaysLinkToLast: true
+                alwaysLinkToLastBuild: true,
+                allowMissing: false
             ])
         }
     }
