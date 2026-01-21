@@ -27,16 +27,15 @@ pipeline {
       
     }
 
-    post {
-        always {
-            echo 'Publication du rapport HTML'
-            publishHTML(target: [
-                reportDir: 'target/report',
-                reportFiles: 'cucumber-report.html',
-                reportName: 'Cucumber Report',
-                keepAll: true,
-                alwaysLinkToLast: true
-            ])
-        }
+  post {
+    always {
+        echo 'Publication du rapport Cucumber (JSON → HTML via Jenkins)'
+
+        cucumber(
+            buildStatus: 'UNSTABLE',
+            fileIncludePattern: '**/target/report/cucumber.json',
+            sortingMethod: 'ALPHABETICAL'
+        )
     }
+}
 }
