@@ -2,41 +2,62 @@ pipeline {
     agent any
 
     tools {
-        jdk 'JAVA_HOME'      // Nom exact de ta JDK dans Jenkins
-        maven 'MAVEN_HOME'   // Nom exact de ton Maven dans Jenkins
+        maven 'JAVA_HOME'
+        jdk 'MAVEN_HOME'
     }
 
-    options {
-        timestamps()
-        disableConcurrentBuilds()
+    environment {
+        MAVEN_OPTS = "-Xmx1024m"
     }
 
     stages {
+
         stage('Checkout') {
             steps {
-                checkout scm
+                git branch: 'master', url: 'https://github.com/Ines-Sakesli/selenium-cucumber-BDD1.git'
             }
         }
 
-        stage('Build & Test') {
+        stage('Clean') {
             steps {
-                echo 'Lancement des tests Maven...'
-                bat 'mvn clean verify'
+                bat 'mvn clean'
             }
         }
-      
+
+        stage('Compile') {
+            steps {
+                bat 'mvn compile'
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                // Génère le JSON report pour Cucumber
+                bat 'mvn test -Dcucumber.plugin="json:target/report/cucumber.json"'
+            }
+        }
+
+        stage('Cucumber Report') {
+            steps {
+                // Utilise le plugin Cucumber Jenkins pour générer le HTML à partir du JSON
+                cucumber(
+                    jsonReportDirectory: 'target/report',
+                    fileIncludePattern: 'cucumber.json'
+                )
+            }
+        }
     }
 
     post {
         always {
-            echo 'Publication du rapport HTML'
-            publishHTML(target: [
-                reportDir: 'target/report',
-                reportFiles: 'cucumber-report.html',
-                reportName: 'Cucumber Report',
-                keepAll: true,
-                alwaysLinkToLast: true
-            ])
+            //archiveArtifacts artifacts: '*/target/.jar', fingerprint: true
+            junit '*/target/report/surefire-reports/.xml'
+        }
+        failure {
+            echo '❌ Pipeline échoué'
+        }
+        success {
+            echo '✅ Tests exécutés avec succès'
         }
     }
 }
